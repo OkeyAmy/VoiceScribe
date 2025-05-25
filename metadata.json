@@ -1,0 +1,8 @@
+{
+  "name": "Dictation App",
+  "description": "Effortless multilingual dictation powered by Gemini. Supports English, Igbo, and Nigerian Pidgin. Turn long rambling recordings into perfectly transcribed and polished notes.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "prompt": ""
+}

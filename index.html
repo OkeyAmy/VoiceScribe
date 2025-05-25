@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VoiceScribe | Multilingual Dictation</title>
+    <link rel="stylesheet" href="index.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script type="importmap">
+      {
+        "imports": {
+          "@google/genai": "https://esm.sh/@google/genai@^0.8.0",
+          "marked": "https://esm.sh/marked@^4.0.0"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- App Header -->
+      <header class="app-header">
+        <div class="logo">
+          <i class="fas fa-waveform-voice"></i>
+          <span>VoiceScribe</span>
+        </div>
+        <div class="header-actions">
+          <button id="themeToggleButton" class="icon-button" title="Toggle Theme">
+            <i class="fas fa-moon"></i>
+          </button>
+          <button id="helpButton" class="icon-button" title="Help">
+            <i class="fas fa-question-circle"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+          <div class="sidebar-header">
+            <h3>Notes</h3>
+            <button id="newButton" class="icon-button" title="New Note">
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+          
+          <div class="note-list">
+            <!-- Notes will be dynamically added here -->
+            <div class="empty-notes-message">
+              <i class="fas fa-microphone-lines"></i>
+              <p>Start recording to create your first note</p>
+            </div>
+          </div>
+          
+          <div class="sidebar-footer">
+            <div class="language-indicator">
+              <i class="fas fa-globe"></i>
+              <span>EN, IG, YO, HA, Pidgin</span>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+          <div class="note-area">
+            <div class="note-header">
+              <div class="editor-title" contenteditable="true" placeholder="Untitled Note">
+                Untitled Note
+              </div>
+              
+              <div class="note-actions">
+                <button id="exportButton" class="action-pill" title="Export Note">
+                  <i class="fas fa-file-export"></i>
+                  <span>Export</span>
+                </button>
+                <button id="shareButton" class="action-pill" title="Share Note">
+                  <i class="fas fa-share-nodes"></i>
+                  <span>Share</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="tab-navigation-container">
+              <div class="tab-navigation">
+                <button class="tab-button active" data-tab="note">
+                  <i class="fas fa-file-lines"></i>
+                  <span>Polished</span>
+                </button>
+                <button class="tab-button" data-tab="raw">
+                  <i class="fas fa-microphone-alt"></i>
+                  <span>Raw</span>
+                </button>
+                <button class="tab-button" data-tab="summary">
+                  <i class="fas fa-list-check"></i>
+                  <span>Summary</span>
+                </button>
+                <button class="tab-button" data-tab="translations">
+                  <i class="fas fa-language"></i>
+                  <span>Translations</span>
+                </button>
+                <div class="active-tab-indicator"></div>
+              </div>
+            </div>
+
+            <div class="note-content-wrapper">
+              <div
+                id="polishedNote"
+                class="note-content active"
+                contenteditable="true"
+                placeholder="Your polished notes will appear here..."
+              ></div>
+              <div
+                id="rawTranscription"
+                class="note-content"
+                contenteditable="true"
+                placeholder="Raw transcription will appear here..."
+              ></div>
+              <div
+                id="summaryContent"
+                class="note-content"
+                contenteditable="true"
+                placeholder="Generate a summary of your notes..."
+              >
+                <div class="empty-content-action">
+                  <p>No summary generated yet</p>
+                  <button id="generateSummaryBtn" class="action-button-inline">
+                    <i class="fas fa-wand-magic-sparkles"></i>
+                    Generate Summary
+                  </button>
+                </div>
+              </div>
+              <div
+                id="translationsContent"
+                class="note-content"
+                contenteditable="true"
+                placeholder="Translate your notes to other languages..."
+              >
+                <div class="translations-container">
+                  <div class="translation-options">
+                    <p>Translate your note to:</p>
+                    <div class="language-buttons">
+                      <button class="language-button" data-lang="en">English</button>
+                      <button class="language-button" data-lang="ig">Igbo</button>
+                      <button class="language-button" data-lang="yo">Yoruba</button>
+                      <button class="language-button" data-lang="ha">Hausa</button>
+                    </div>
+                  </div>
+                  <div class="translation-result" id="translationResult">
+                    <p class="translation-placeholder">Select a language to translate your note</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+      
+      <!-- Floating Record Button -->
+      <div class="floating-record-container">
+        <button id="recordButton" class="floating-record-button" title="Start Recording">
+          <div class="record-button-inner">
+            <i class="fas fa-microphone"></i>
+          </div>
+          <svg class="record-waves" viewBox="0 0 200 200">
+            <circle class="wave wave1" cx="100" cy="100" r="40" />
+            <circle class="wave wave2" cx="100" cy="100" r="70" />
+            <circle class="wave wave3" cx="100" cy="100" r="100" />
+          </svg>
+        </button>
+        <span id="recordingStatus" class="recording-status">Ready to record</span>
+      </div>
+      
+      <!-- Recording Modal -->
+      <div id="recordingModal" class="recording-modal">
+        <div class="recording-modal-content">
+          <div id="liveRecordingTitle" class="live-recording-title">Recording</div>
+          <div class="waveform-container">
+            <canvas id="liveWaveformCanvas"></canvas>
+          </div>
+          <div id="liveRecordingTimerDisplay" class="live-recording-timer">00:00.00</div>
+          <button id="stopRecordButton" class="stop-record-button">
+            <i class="fas fa-stop"></i>
+            <span>Stop Recording</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>VoiceScribe Help</h2>
+          <button class="close-modal"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+          <h3>Getting Started</h3>
+          <p>VoiceScribe lets you record, transcribe, and process your voice in multiple languages including English, Igbo, Yoruba, Hausa, and Nigerian Pidgin.</p>
+          
+          <h3>Features</h3>
+          <ul>
+            <li><strong>Record:</strong> Click the microphone button to start/stop recording.</li>
+            <li><strong>Polished Notes:</strong> Automatically removes filler words and formats your speech.</li>
+            <li><strong>Summaries:</strong> Generate concise summaries of your recordings.</li>
+            <li><strong>Translations:</strong> Translate your notes into different languages.</li>
+          </ul>
+          
+          <h3>Language Support</h3>
+          <p>VoiceScribe can transcribe mixed languages in the same recording. Speak naturally, even when switching between languages.</p>
+          
+          <h3>Local Dialect Features</h3>
+          <p>This app is specially designed to understand Nigerian languages and dialects, including:</p>
+          <ul>
+            <li><strong>Igbo:</strong> Recognizes tonal patterns and dialectal variations</li>
+            <li><strong>Yoruba:</strong> Handles diacritical marks and tonal inflections</li>
+            <li><strong>Hausa:</strong> Understands contextual meanings and idiomatic expressions</li>
+            <li><strong>Nigerian Pidgin:</strong> Processes code-switching and regional expressions</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const tabNav = document.querySelector(".tab-navigation");
+        const tabButtons = tabNav.querySelectorAll(".tab-button");
+        const activeTabIndicator = tabNav.querySelector(".active-tab-indicator");
+        const noteContents = document.querySelectorAll(".note-content");
+        const recordButton = document.getElementById('recordButton');
+        const recordingModal = document.getElementById('recordingModal');
+        const stopRecordButton = document.getElementById('stopRecordButton');
+
+        // Modal functionality
+        const helpButton = document.getElementById('helpButton');
+        const helpModal = document.getElementById('helpModal');
+        const closeModal = helpModal.querySelector('.close-modal');
+        
+        helpButton.addEventListener('click', () => {
+          helpModal.classList.add('show');
+        });
+        
+        closeModal.addEventListener('click', () => {
+          helpModal.classList.remove('show');
+        });
+        
+        window.addEventListener('click', (e) => {
+          if (e.target === helpModal) {
+            helpModal.classList.remove('show');
+          }
+        });
+        
+        // Recording modal functionality
+        recordButton.addEventListener('click', () => {
+          recordingModal.classList.add('show');
+          recordButton.classList.add('recording');
+        });
+        
+        stopRecordButton.addEventListener('click', () => {
+          recordingModal.classList.remove('show');
+          recordButton.classList.remove('recording');
+        });
+
+        function setActiveTab(activeButton, skipAnimation = false) {
+          if (!activeButton || !activeTabIndicator) return;
+
+          tabButtons.forEach((btn) => btn.classList.remove("active"));
+          activeButton.classList.add("active");
+
+          const tabName = activeButton.getAttribute("data-tab");
+          noteContents.forEach((content) => content.classList.remove("active"));
+
+          if (tabName === "raw") {
+            document.getElementById("rawTranscription").classList.add("active");
+          } else if (tabName === "summary") {
+            document.getElementById("summaryContent").classList.add("active");
+          } else if (tabName === "translations") {
+            document.getElementById("translationsContent").classList.add("active");
+          } else {
+            document.getElementById("polishedNote").classList.add("active");
+          }
+
+          const originalTransition = activeTabIndicator.style.transition;
+          if (skipAnimation) {
+            activeTabIndicator.style.transition = "none";
+          } else {
+            activeTabIndicator.style.transition = "";
+          }
+
+          activeTabIndicator.style.left = `${activeButton.offsetLeft}px`;
+          activeTabIndicator.style.width = `${activeButton.offsetWidth}px`;
+
+          if (skipAnimation) {
+            activeTabIndicator.offsetHeight;
+            activeTabIndicator.style.transition = originalTransition;
+          }
+        }
+
+        tabButtons.forEach((button) => {
+          button.addEventListener("click", (e) => {
+            setActiveTab(e.currentTarget);
+          });
+        });
+
+        const initiallyActiveButton = tabNav.querySelector(".tab-button.active");
+        if (initiallyActiveButton) {
+          requestAnimationFrame(() => {
+            setActiveTab(initiallyActiveButton, true);
+          });
+        }
+
+        window.addEventListener("resize", () => {
+          requestAnimationFrame(() => {
+            const currentActiveButton = tabNav.querySelector(".tab-button.active");
+            if (currentActiveButton) {
+              setActiveTab(currentActiveButton, true);
+            }
+          });
+        });
+        
+        // Language buttons in translations tab
+        const languageButtons = document.querySelectorAll('.language-button');
+        languageButtons.forEach(button => {
+          button.addEventListener('click', function() {
+            const lang = this.getAttribute('data-lang');
+            document.querySelector('.translation-placeholder').style.display = 'none';
+            document.getElementById('translationResult').innerHTML = 
+              `<div class="translation-loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>Translating to ${this.textContent}...</span>
+              </div>`;
+          });
+        });
+        
+        // Generate summary button
+        const generateSummaryBtn = document.getElementById('generateSummaryBtn');
+        if (generateSummaryBtn) {
+          generateSummaryBtn.addEventListener('click', function() {
+            const emptyContent = this.closest('.empty-content-action');
+            if (emptyContent) {
+              emptyContent.innerHTML = `
+                <div class="generating-content">
+                  <i class="fas fa-spinner fa-spin"></i>
+                  <span>Generating summary...</span>
+                </div>
+              `;
+            }
+          });
+        }
+      });
+    </script>
+  </body>
+</html>
+<script src="index.tsx" type="module"></script>
