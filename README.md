@@ -10,8 +10,8 @@ VoiceScribe is a modern, web-based multilingual dictation application that lets 
 - **Real-time Waveform**: Visual feedback of sound input while recording.
 - **Multilingual Transcription**: Uses Google GenAI to transcribe mixed speech in English, Igbo, Yoruba, Hausa, and Nigerian Pidgin, preserving linguistic nuances.
 - **Polished Notes**: Automatically removes filler words, corrects grammar, and formats text in Markdown.
-- **Summaries**: One-click generation of concise summaries (≈30% of original length) retaining meaning and tone.
-- **Translations**: Translate polished notes into English, Igbo, Yoruba, or Hausa with Markdown formatting preserved.
+- **Summaries**: One-click generation of creative flashcard-style summaries that highlight key points while retaining meaning and tone.
+- **Translations**: Translate your summary flashcards into multiple languages (Spanish, French, German, Igbo, Yoruba, Hausa, Nigerian Pidgin) with Markdown formatting preserved, directly in the Summary tab.
 - **Save & Manage Notes**: List, switch between, and delete notes; stored locally in browser.
 - **Export & Share**: Export notes as `.md` files or share via the Web Share API (or clipboard fallback).
 - **Dark/Light Theme**: Toggle between dark and light modes with a header icon.
@@ -53,7 +53,7 @@ VoiceScribe is a modern, web-based multilingual dictation application that lets 
 2. Click **Stop** in the recording modal to end.
 3. Wait for transcription and polishing to complete; view in the **Raw** and **Polished** tabs.
 4. Generate a summary in the **Summary** tab.
-5. Translate your note in the **Translations** tab.
+5. Use the **Translate** button in the **Summary** tab to convert your summary into another language.
 6. Export or share via the header buttons.
 
 ## Configuration
