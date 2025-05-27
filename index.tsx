@@ -15,7 +15,6 @@ interface Note {
   rawTranscription: string;
   polishedNote: string;
   summary?: string;
-  translations?: Record<string, string>;
   timestamp: number;
 }
 
@@ -49,11 +48,8 @@ class VoiceNotesApp {
   private timerIntervalId: number | null = null;
   private recordingStartTime: number = 0;
   
-  // New properties for enhanced features
+  // Updated properties for simplified features
   private summaryContent: HTMLDivElement;
-  private translationsContent: HTMLDivElement;
-  private translationResult: HTMLDivElement;
-  private languageButtons: NodeListOf<HTMLButtonElement>;
   private generateSummaryBtn: HTMLButtonElement | null;
   private exportButton: HTMLButtonElement;
   private shareButton: HTMLButtonElement;
@@ -62,7 +58,6 @@ class VoiceNotesApp {
   private notes: Note[] = [];
   private noteList: HTMLDivElement;
   private isProcessingSummary: boolean = false;
-  private isProcessingTranslation: boolean = false;
 
   constructor() {
     // Fix: Initialize GoogleGenAI client according to guidelines, removing apiVersion.
@@ -107,9 +102,6 @@ class VoiceNotesApp {
 
     // Get new DOM elements
     this.summaryContent = document.getElementById('summaryContent') as HTMLDivElement;
-    this.translationsContent = document.getElementById('translationsContent') as HTMLDivElement;
-    this.translationResult = document.getElementById('translationResult') as HTMLDivElement;
-    this.languageButtons = document.querySelectorAll('.language-button') as NodeListOf<HTMLButtonElement>;
     this.generateSummaryBtn = document.getElementById('generateSummaryBtn') as HTMLButtonElement;
     this.exportButton = document.getElementById('exportButton') as HTMLButtonElement;
     this.shareButton = document.getElementById('shareButton') as HTMLButtonElement;
@@ -156,15 +148,11 @@ class VoiceNotesApp {
       this.generateSummaryBtn.addEventListener('click', () => this.generateSummary());
     }
     
-    this.languageButtons.forEach(button => {
-      button.addEventListener('click', (e) => {
-        const lang = (e.currentTarget as HTMLButtonElement).getAttribute('data-lang');
-        if (lang) this.translateNote(lang);
-      });
-    });
-    
     this.exportButton.addEventListener('click', () => this.exportNote());
     this.shareButton.addEventListener('click', () => this.shareNote());
+    
+    // Initialize tab navigation
+    this.initTabNavigation();
     
     // Help modal listeners are handled in the HTML
   }
@@ -537,17 +525,54 @@ class VoiceNotesApp {
     try {
       this.recordingStatus.textContent = 'Getting transcription...';
 
+      // const contents = [
+      //   {text: 'Transcribe this audio literally and exactly as spoken. The audio may contain a mix of English, Igbo, Yoruba, Hausa, and Nigerian Pidgin.\n\n' +
+      //   'Important guidelines:\n' +
+      //   '- Transcribe ONLY the spoken content - do not add any notes, comments, or description\n' +
+      //   '- Do NOT include phrases like "here\'s what the user said" or similar meta-commentary\n' +
+      //   '- Do NOT include any headers, sections, or explanations\n' +
+      //   '- Start the transcript immediately with the first spoken words\n' +
+      //   '- Preserve all linguistic nuances including:\n' +
+      //   '  - Tonal patterns and dialectal variations in Igbo\n' +
+      //   '  - Diacritical marks and tonal inflections in Yoruba\n' +
+      //   '  - Contextual meanings and idiomatic expressions in Hausa\n' +
+      //   '  - Code-switching between languages\n' +
+      //   '  - It must be word for word, no paraphrasing or summarizing\n just the words as they are spoken from the user\n' +
+      //   '  - Regional Nigerian Pidgin expressions and colloquialisms\n' +
+      //   '- Include all fillers, hesitations, and repetitions\n' +
+      //   '- Do not clean up or polish the language - provide the raw verbatim transcript\n' +
+      //   '- Preserve the cultural context and meaning in the transcription'},
+      //   {inlineData: {mimeType: mimeType, data: base64Audio}},
+      // ];
       const contents = [
-        {text: 'Generate a complete, detailed transcript of this audio. The audio may contain a mix of English, Igbo, Yoruba, Hausa, and Nigerian Pidgin. Accurately transcribe preserving all original languages and dialects with their proper tone marks, accents, and linguistic nuances. Pay special attention to:' +
-        '\n- Tonal patterns and dialectal variations in Igbo' +
-        '\n- Diacritical marks and tonal inflections in Yoruba' +
-        '\n- Contextual meanings and idiomatic expressions in Hausa' +
-        '\n- Code-switching between languages (which is common in Nigerian speech)' +
-        '\n- Regional Nigerian Pidgin expressions and colloquialisms' +
-        '\n\nPreserve the cultural context and meaning in the transcription.'},
-        {inlineData: {mimeType: mimeType, data: base64Audio}},
+        {
+          text: `Transcribe the provided audio exactly as spoken, preserving every nuance. The recording may include English, Igbo, Yoruba, Hausa, and Nigerian Pidgin.
+      
+      Guidelines:
+      1. **Literal Verbatim**: Capture only the spoken words, without paraphrasing, summarizing, or adding any commentary.
+      2. **No Meta-Text**: Do not include headers, notes (e.g., “here’s what the user said”), descriptions, or explanations.
+      3. **Immediate Start**: Begin the transcript with the first utterance—no preamble.
+      4. **Nuance Preservation**:
+         - Tonal patterns and dialectal variations in Igbo
+         - Diacritical marks and tonal inflections in Yoruba
+         - Contextual meanings and idiomatic expressions in Hausa
+         - Code-switching and mixed-language segments
+         - Regional Nigerian Pidgin colloquialisms
+      5. **Fillers and Hesitations**: Include all fillers (e.g., “um,” “ah”), repetitions, false starts, and pauses.
+      6. **Cultural Context**: Maintain the original cultural connotations and emphasis used by the speaker.
+      7. **Raw Format**: Do not clean up or polish the language; provide raw, unedited speech content.
+      8. **Timestamps**: Attach metadata timestamps for each segment (e.g., [00:00:05]) where feasible.
+      
+      Provide the output as a plain transcript array without modifying this template.`,
+        },
+        {
+          inlineData: {
+            mimeType: mimeType,
+            data: base64Audio
+          }
+        }
       ];
-
+        
       // Fix: Explicitly type `response` for clarity and to ensure `response.text` is correctly typed as string.
       const response: GenerateContentResponse = await this.genAI.models.generateContent({
         model: MODEL_NAME,
@@ -614,19 +639,16 @@ class VoiceNotesApp {
 
       this.recordingStatus.textContent = 'Polishing note...';
 
-      const prompt = `Take this raw transcription, which may contain a mix of English, Igbo, Yoruba, Hausa, and Nigerian Pidgin, and create a polished, well-formatted note.
-- Recognize and preserve linguistic nuances across all languages including:
-  * Tonal patterns in Igbo
-  * Diacritical marks in Yoruba 
-  * Contextual expressions in Hausa
-  * Colloquialisms in Nigerian Pidgin
+      const prompt = `Polish and format this raw transcription text using markdown. It may contain a mix of English, Igbo, Yoruba, Hausa, and Nigerian Pidgin.
+
+Important guidelines:
+- Preserve linguistic nuances across all languages (tonal patterns, diacritical marks, contextual expressions, colloquialisms)
 - Maintain all code-switching between languages
-- Preserve cultural context and idiomatic expressions
-- Remove filler words (e.g., um, uh, like), repetitions, and false starts
-- Correct obvious grammatical errors if they don't alter meaning
-- Format the note using markdown for headings, lists, bolding, and italics where appropriate
-- Ensure all key information and cultural nuances from the raw transcription are retained
-- The polished note should be clear, concise, and easy to read, while authentically representing the original speech patterns
+- Remove filler words (um, uh, like), repetitions, and false starts
+- Correct obvious grammatical errors without altering meaning
+- Format with markdown for readability (headings, lists, bold, italics where needed)
+- Retain all key information and cultural nuances
+- Focus solely on direct polishing - do NOT include ANY meta-commentary about the text or your process
 
 Raw transcription:
 ${this.rawTranscription.textContent}`;
@@ -789,11 +811,6 @@ ${this.rawTranscription.textContent}`;
     if (newGenerateBtn) {
       newGenerateBtn.addEventListener('click', () => this.generateSummary());
     }
-    
-    // Reset translations tab
-    this.translationResult.innerHTML = `
-      <p class="translation-placeholder">Select a language to translate your note</p>
-    `;
 
     if (this.editorTitle) {
       const placeholder =
@@ -957,8 +974,37 @@ ${this.rawTranscription.textContent}`;
     
     // Update summary tab if available
     if (note.summary) {
-      this.summaryContent.innerHTML = marked.parse(note.summary);
+      this.summaryContent.innerHTML = `
+        <div class="summary-toolbar">
+          <select id="languageSelect" class="language-button">
+            <option value="" disabled selected>Translate to...</option>
+            <option value="Spanish">Spanish</option>
+            <option value="French">French</option>
+            <option value="German">German</option>
+            <option value="Igbo">Igbo</option>
+            <option value="Yoruba">Yoruba</option>
+            <option value="Hausa">Hausa</option>
+            <option value="Nigerian Pidgin">Nigerian Pidgin</option>
+          </select>
+          <button id="translateSummaryBtn" class="action-button-inline">
+            <i class="fas fa-language"></i>
+            Translate
+          </button>
+        </div>
+        <div class="flashcard-summary">
+          ${marked.parse(note.summary)}
+        </div>
+      `;
       this.summaryContent.classList.remove('placeholder-active');
+      // Bind translation listener
+      const translateBtn = this.summaryContent.querySelector('#translateSummaryBtn') as HTMLButtonElement;
+      const langSelect = this.summaryContent.querySelector('#languageSelect') as HTMLSelectElement;
+      if (translateBtn && langSelect) {
+        translateBtn.addEventListener('click', () => {
+          const lang = langSelect.value;
+          if (lang) this.translateSummary(lang);
+        });
+      }
     } else {
       this.summaryContent.innerHTML = `
         <div class="empty-content-action">
@@ -974,11 +1020,6 @@ ${this.rawTranscription.textContent}`;
         newGenerateBtn.addEventListener('click', () => this.generateSummary());
       }
     }
-    
-    // Reset translations tab
-    this.translationResult.innerHTML = `
-      <p class="translation-placeholder">Select a language to translate your note</p>
-    `;
   }
 
   private deleteNote(noteId: string): void {
@@ -1011,17 +1052,22 @@ ${this.rawTranscription.textContent}`;
     this.summaryContent.innerHTML = `
       <div class="generating-content">
         <i class="fas fa-spinner fa-spin"></i>
-        <span>Generating summary...</span>
+        <span>Generating flashcard summary...</span>
       </div>
     `;
     
     try {
-      const prompt = `Generate a concise summary of the following text. 
+      const prompt = `Create a flashcard-style summary of the following text.
+
 The summary should:
-- Capture the main ideas, key points, and important details
-- Be about 30% the length of the original text
+- Extract 3-6 key points from the text
+- Format each key point as a bullet point with a bolded heading followed by a brief explanation
+- Example format:
+  - **Heading/Key Point**: Brief explanation or details about this point.
+  - **Another Key Concept**: Further explanation about this concept.
+- Make each flashcard concise but informative
 - Preserve the language(s) used in the original text (which may include English, Igbo, Yoruba, Hausa, and/or Nigerian Pidgin)
-- Format the summary using markdown if appropriate
+- Focus solely on creating the summary - do NOT include ANY meta-commentary about the text or your process
 
 Text to summarize:
 ${this.currentNote.polishedNote}`;
@@ -1048,10 +1094,39 @@ ${this.currentNote.polishedNote}`;
           }
         }
         
-        // Display the summary
-        const htmlContent = marked.parse(summaryText);
+        // Display the flashcard summary with translation toolbar
+        const htmlContent = `
+          <div class="summary-toolbar">
+            <select id="languageSelect" class="language-button">
+              <option value="" disabled selected>Translate to...</option>
+              <option value="Spanish">Spanish</option>
+              <option value="French">French</option>
+              <option value="German">German</option>
+              <option value="Igbo">Igbo</option>
+              <option value="Yoruba">Yoruba</option>
+              <option value="Hausa">Hausa</option>
+              <option value="Nigerian Pidgin">Nigerian Pidgin</option>
+            </select>
+            <button id="translateSummaryBtn" class="action-button-inline">
+              <i class="fas fa-language"></i>
+              Translate
+            </button>
+          </div>
+          <div class="flashcard-summary">
+            ${marked.parse(summaryText)}
+          </div>
+        `;
         this.summaryContent.innerHTML = htmlContent;
         this.summaryContent.classList.remove('placeholder-active');
+        // Bind translation listener
+        const translateBtn = this.summaryContent.querySelector('#translateSummaryBtn') as HTMLButtonElement;
+        const langSelect = this.summaryContent.querySelector('#languageSelect') as HTMLSelectElement;
+        if (translateBtn && langSelect) {
+          translateBtn.addEventListener('click', () => {
+            const lang = langSelect.value;
+            if (lang) this.translateSummary(lang);
+          });
+        }
       } else {
         this.summaryContent.innerHTML = `
           <div class="empty-content-action">
@@ -1086,100 +1161,6 @@ ${this.currentNote.polishedNote}`;
       }
     } finally {
       this.isProcessingSummary = false;
-    }
-  }
-
-  private async translateNote(targetLang: string): Promise<void> {
-    if (this.isProcessingTranslation) return;
-    
-    if (
-      !this.currentNote?.polishedNote ||
-      this.currentNote.polishedNote.trim() === ''
-    ) {
-      alert('Please record and transcribe something first to translate.');
-      return;
-    }
-    
-    this.isProcessingTranslation = true;
-    
-    // Update UI to show translation in progress
-    const languages: Record<string, string> = {
-      'en': 'English',
-      'ig': 'Igbo',
-      'yo': 'Yoruba',
-      'ha': 'Hausa'
-    };
-    
-    this.translationResult.innerHTML = `
-      <div class="translation-loading">
-        <i class="fas fa-spinner fa-spin"></i>
-        <span>Translating to ${languages[targetLang]}...</span>
-      </div>
-    `;
-    
-    try {
-      // Check if translation is already cached
-      if (
-        this.currentNote.translations && 
-        this.currentNote.translations[targetLang]
-      ) {
-        this.translationResult.innerHTML = marked.parse(this.currentNote.translations[targetLang]);
-        this.isProcessingTranslation = false;
-        return;
-      }
-      
-      const prompt = `Translate the following text into ${languages[targetLang]}. 
-Maintain the original formatting and preserve any markdown. 
-Ensure the translation captures the meaning and nuances of the original text.
-
-Original text:
-${this.currentNote.polishedNote}`;
-
-      const contents = [{text: prompt}];
-      
-      const response: GenerateContentResponse = await this.genAI.models.generateContent({
-        model: MODEL_NAME,
-        contents: contents,
-      });
-      
-      const translatedText = response.text;
-      
-      if (translatedText) {
-        // Save translation to current note
-        if (this.currentNote) {
-          if (!this.currentNote.translations) {
-            this.currentNote.translations = {};
-          }
-          
-          this.currentNote.translations[targetLang] = translatedText;
-          
-          // Update the notes array and save to localStorage
-          const noteIndex = this.notes.findIndex(n => n.id === this.currentNote!.id);
-          if (noteIndex !== -1) {
-            this.notes[noteIndex] = this.currentNote;
-            this.saveNotes();
-          }
-        }
-        
-        // Display the translation
-        const htmlContent = marked.parse(translatedText);
-        this.translationResult.innerHTML = htmlContent;
-      } else {
-        this.translationResult.innerHTML = `
-          <div class="translation-error">
-            <p>Failed to translate. Please try again.</p>
-          </div>
-        `;
-      }
-    } catch (error) {
-      console.error(`Error translating to ${targetLang}:`, error);
-      this.translationResult.innerHTML = `
-        <div class="translation-error">
-          <p>Error translating: ${error instanceof Error ? error.message : String(error)}</p>
-        </div>
-      `;
-    } finally {
-      this.isProcessingTranslation = false;
     }
   }
 
@@ -1245,6 +1226,107 @@ ${this.currentNote.polishedNote}`;
           console.error('Failed to copy text: ', err);
           alert('Could not copy text to clipboard. Your browser may not support this feature.');
         });
+    }
+  }
+
+  private initTabNavigation(): void {
+    const tabNav = document.querySelector('.tab-navigation');
+    if (!tabNav) return;
+    const tabButtons = Array.from(tabNav.querySelectorAll<HTMLButtonElement>('.tab-button'));
+    const indicator = tabNav.querySelector<HTMLDivElement>('.active-tab-indicator');
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (indicator) {
+          indicator.style.left = `${btn.offsetLeft}px`;
+          indicator.style.width = `${btn.offsetWidth}px`;
+        }
+        const selected = btn.getAttribute('data-tab');
+        ['note', 'raw', 'summary'].forEach(name => {
+          const el = document.getElementById(`${name}Tab`);
+          if (el) el.classList.remove('active');
+        });
+        const target = document.getElementById(`${selected}Tab`);
+        if (target) target.classList.add('active');
+      });
+    });
+    const activeBtn = tabNav.querySelector<HTMLButtonElement>('.tab-button.active');
+    if (activeBtn && indicator) {
+      indicator.style.left = `${activeBtn.offsetLeft}px`;
+      indicator.style.width = `${activeBtn.offsetWidth}px`;
+    }
+  }
+
+  private async translateSummary(language: string): Promise<void> {
+    if (!this.currentNote?.summary) {
+      alert('No summary available to translate.');
+      return;
+    }
+    this.summaryContent.innerHTML = `
+      <div class="translation-loading">
+        <i class="fas fa-spinner fa-spin"></i>
+        <span>Translating summary to ${language}...</span>
+      </div>
+    `;
+    try {
+      const prompt = `Translate the following markdown flashcard summary into ${language}. Preserve the bullet points and formatting exactly:
+      
+      ${this.currentNote.summary}`;
+      const response: GenerateContentResponse = await this.genAI.models.generateContent({
+        model: MODEL_NAME,
+        contents: [{ text: prompt }],
+      });
+      const translatedText = response.text;
+      // Update note and persist
+      this.currentNote.summary = translatedText;
+      const idx = this.notes.findIndex(n => n.id === this.currentNote!.id);
+      if (idx !== -1) {
+        this.notes[idx] = this.currentNote;
+        this.saveNotes();
+      }
+      // Render translated summary with toolbar
+      this.summaryContent.innerHTML = `
+        <div class="summary-toolbar">
+          <select id="languageSelect" class="language-button">
+            <option value="" disabled selected>Translate to...</option>
+            <option value="Spanish">Spanish</option>
+            <option value="French">French</option>
+            <option value="German">German</option>
+            <option value="Igbo">Igbo</option>
+            <option value="Yoruba">Yoruba</option>
+            <option value="Hausa">Hausa</option>
+            <option value="Nigerian Pidgin">Nigerian Pidgin</option>
+          </select>
+          <button id="translateSummaryBtn" class="action-button-inline">
+            <i class="fas fa-language"></i>
+            Translate
+          </button>
+        </div>
+        <div class="flashcard-summary">
+          ${marked.parse(translatedText)}
+        </div>
+      `;
+      this.summaryContent.classList.remove('placeholder-active');
+      // Rebind translation listener
+      const translateBtn2 = this.summaryContent.querySelector('#translateSummaryBtn') as HTMLButtonElement;
+      const langSelect2 = this.summaryContent.querySelector('#languageSelect') as HTMLSelectElement;
+      if (translateBtn2 && langSelect2) {
+        translateBtn2.addEventListener('click', () => this.translateSummary(langSelect2.value));
+      }
+    } catch (error) {
+      console.error('Error translating summary:', error);
+      this.summaryContent.innerHTML = `
+        <div class="empty-content-action">
+          <p>Failed to translate summary. Please try again.</p>
+          <button id="translateSummaryBtn" class="action-button-inline">
+            <i class="fas fa-wand-magic-sparkles"></i>
+            Retry
+          </button>
+        </div>
+      `;
+      const retryBtn = this.summaryContent.querySelector('#translateSummaryBtn');
+      if (retryBtn) retryBtn.addEventListener('click', () => this.translateSummary(language));
     }
   }
 }
