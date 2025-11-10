@@ -8,7 +8,7 @@
 import {GoogleGenAI, GenerateContentResponse} from '@google/genai';
 import {marked} from 'marked';
 
-const MODEL_NAME = 'gemini-2.5-flash-preview-04-17';
+const MODEL_NAME = 'gemini-2.5-flash-lite';
 
 interface Note {
   id: string;
