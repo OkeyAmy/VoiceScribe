@@ -23,7 +23,7 @@ VoiceScribe is a modern, web-based multilingual dictation application that lets 
 
 ### Prerequisites
 
-- Node.js v14+ and npm installed
+- Node.js v18+ and npm (or pnpm) installed
 - A Google Cloud API key with access to Gemini 2.5 models
 
 ### Setup
@@ -33,19 +33,27 @@ VoiceScribe is a modern, web-based multilingual dictation application that lets 
    git clone https://github.com/OkeyAmy/VoiceScribe.git
    cd VoiceScribe
    ```
-2. Install dependencies (use `--legacy-peer-deps` if prompted):
+
+2. Install dependencies:
    ```bash
    npm install --legacy-peer-deps
+   # or
+   pnpm install --legacy-peer-deps
    ```
-3. Create a `.env` file in the root directory with your API key:
+
+3. Create a `.env.local` file in the root directory with your API key:
    ```env
    GEMINI_API_KEY=your_google_genai_api_key
    ```
+
 4. Start the development server:
    ```bash
-   npm start
+   npm run dev
+   # or
+   pnpm dev
    ```
-5. Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+5. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## Usage
 
@@ -56,29 +64,66 @@ VoiceScribe is a modern, web-based multilingual dictation application that lets 
 5. Use the **Translate** button in the **Summary** tab to convert your summary into another language.
 6. Export or share via the header buttons.
 
+## Building for Production
+
+To create an optimized production build:
+
+```bash
+npm run build
+# or
+pnpm build
+```
+
+To run the production build locally:
+
+```bash
+npm start
+# or
+pnpm start
+```
+
 ## Configuration
 
-- **API_KEY**: Set in `.env` to authenticate GenAI requests.
-- **Port**: Default is `5173`; modify in `package.json` scripts if needed.
+- **GEMINI_API_KEY**: Set in `.env.local` to authenticate GenAI requests.
+- **Port**: Default is `3000`; set `PORT` environment variable to change.
 
 ## Project Structure
 
 ```
 / (root)
-├─ index.html       # Main HTML template
-├─ index.css        # Styles (Tailwind-inspired variables)
-├─ index.tsx        # Main TypeScript application logic
-├─ README.md        # Project documentation
-└─ .env             # Environment variables (not committed)
+├─ app/
+│  ├─ components/
+│  │  └─ VoiceNotesApp.tsx  # Main application logic
+│  ├─ layout.tsx             # Root layout with metadata
+│  ├─ page.tsx               # Main page component
+│  └─ globals.css            # Global styles
+├─ public/                   # Static assets
+├─ next.config.js            # Next.js configuration
+├─ tsconfig.json             # TypeScript configuration
+├─ package.json              # Dependencies and scripts
+├─ .env.local                # Environment variables (not committed)
+└─ README.md                 # Project documentation
 ```
 
 ## Technologies
 
-- **Language & Framework**: TypeScript, HTML, CSS
+- **Framework**: Next.js 15 (App Router)
+- **Language**: TypeScript
+- **UI**: React 19
 - **AI & NLP**: @google/genai (Gemini-2.5), marked (Markdown parser)
 - **Browser APIs**: MediaRecorder, Web Share, Clipboard, LocalStorage
 - **Styling**: CSS variables, Flexbox, Grid, responsive design
-- **Icons & Fonts**: Font Awesome 6, Google Fonts (Inter)
+- **Icons & Fonts**: Font Awesome 6, Google Fonts (Inter, JetBrains Mono)
+
+## Deployment
+
+This Next.js application can be deployed to:
+
+- **Vercel** (recommended): Connect your repository for automatic deployments
+- **Netlify**: Deploy with the Next.js plugin
+- **Self-hosted**: Use `npm run build && npm start` on any Node.js server
+
+Make sure to set the `GEMINI_API_KEY` environment variable in your deployment platform.
 
 
 ## License
